@@ -38,6 +38,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cerrno>
+#include <stdio.h>
 #include <arpa/inet.h>
 #else
 #error OS not supported for IP Socket Communications
@@ -114,7 +115,9 @@ bool IpSocket::isOpened() {
     return is_open;
 }
 
-void IpSocket::close() {
+void IpSocket::close(const char* str) {
+    printf("IpSocket::close\n");
+    printf("Calling function: %s\n", str);
     this->m_lock.lock();
     if (this->m_fd != -1) {
         (void)::shutdown(this->m_fd, SHUT_RDWR);
@@ -126,6 +129,7 @@ void IpSocket::close() {
 }
 
 void IpSocket::shutdown() {
+    printf("IpSocket::shutdown\n");
     this->close();
     this->m_lock.lock();
     this->m_started = false;
@@ -133,6 +137,7 @@ void IpSocket::shutdown() {
 }
 
 SocketIpStatus IpSocket::startup(const bool reuse_address) {
+    printf("IpSocket::startup\n");
     this->m_lock.lock();
     this->m_started = true;
     this->m_lock.unLock();
@@ -174,6 +179,7 @@ SocketIpStatus IpSocket::send(const U8* const data, const U32 size) {
         }
         // Error bad file descriptor is a close along with reset
         else if ((sent == -1) && ((errno == EBADF) || (errno == ECONNRESET))) {
+            printf("IpSocket SOCK_DISCONNECTED send\n");
             this->close();
             return SOCK_DISCONNECTED;
         }
@@ -203,13 +209,20 @@ SocketIpStatus IpSocket::recv(U8* data, U32& req_read) {
     // Try to read until we fail to receive data
     for (U32 i = 0; (i < SOCKET_MAX_ITERATIONS) && (size <= 0); i++) {
         // Attempt to recv out data
+        //printf("recvProtocol\n");
+        //printf("%s\n",strerror(errno));
         size = this->recvProtocol(data, req_read);
+        if (size == -1 && (errno == EAGAIN)) {
+            req_read = 0;
+            return SOCK_SUCCESS;
+        }
         // Error is EINTR, just try again
-        if (size == -1 && ((errno == EINTR) || errno == EAGAIN)) {
+        if (size == -1 && ((errno == EINTR) || (errno == EAGAIN))) {
             continue;
         }
         // Zero bytes read reset or bad ef means we've disconnected
         else if (size == 0 || ((size == -1) && ((errno == ECONNRESET) || (errno == EBADF)))) {
+            printf("IpSocket SOCK_DISCONNECTED recv\n");
             this->close();
             req_read = static_cast<U32>(size);
             return SOCK_DISCONNECTED;

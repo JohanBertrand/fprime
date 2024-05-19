@@ -49,6 +49,7 @@ void TcpClientTester ::test_with_loop(U32 iterations, bool recv_thread) {
 
     // Loop through a bunch of client disconnects
     for (U32 i = 0; i < iterations; i++) {
+        //Os::Task::delay(1);
         U32 size = sizeof(m_data_storage);
 
         // Not testing with reconnect thread, we will need to open ourselves
@@ -57,6 +58,7 @@ void TcpClientTester ::test_with_loop(U32 iterations, bool recv_thread) {
         } else {
             EXPECT_TRUE(Drv::Test::wait_on_change(this->component.getSocketHandler(), true, SOCKET_RETRY_INTERVAL_MS/10 + 1));
         }
+
         EXPECT_TRUE(this->component.getSocketHandler().isOpened());
         status2 = server.open(true);
 
@@ -66,6 +68,7 @@ void TcpClientTester ::test_with_loop(U32 iterations, bool recv_thread) {
         // If all the opens worked, then run this
         if ((Drv::SOCK_SUCCESS == status1) && (Drv::SOCK_SUCCESS == status2) &&
             (this->component.getSocketHandler().isOpened())) {
+            //this->component.m_lock.unlock();
             // Force the sockets not to hang, if at all possible
             Drv::Test::force_recv_timeout(this->component.getSocketHandler());
             Drv::Test::force_recv_timeout(server);
@@ -83,16 +86,37 @@ void TcpClientTester ::test_with_loop(U32 iterations, bool recv_thread) {
                 m_data_buffer.setSize(sizeof(m_data_storage));
                 server.send(m_data_buffer.getData(), m_data_buffer.getSize());
                 while (not m_spinner) {}
+                //while (not this->component.m_received_data) {}
+                //this->component.m_received_data = false;
             }
         }
         // Properly stop the client on the last iteration
-        if ((1 + i) == iterations && recv_thread) {
-            this->component.stopSocketTask();
-            this->component.joinSocketTask(nullptr);
+        if (recv_thread) {
+            //this->component.close();
+            if ((1 + i) == iterations)
+            {
+                this->component.m_task_lock.lock();
+                this->component.stopSocketTask();
+                this->component.m_task_lock.unlock();
+                this->component.joinSocketTask(nullptr);
+            }
         } else {
+            printf("this->component.close()\n");
             this->component.close();
         }
+        if (recv_thread) {
+            printf("Tester mutex lock\n");
+            this->component.m_task_lock.lock();
+            printf("Tester mutex locked\n");
+            this->component.close();
+        }
+        printf("server.close()\n");
         server.close();
+        printf("server.close() Done\n");
+
+        if (recv_thread) {
+            this->component.m_task_lock.unlock();
+        }
     }
     server.shutdown();
     ASSERT_from_ready_SIZE(iterations);

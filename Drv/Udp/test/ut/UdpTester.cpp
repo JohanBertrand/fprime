@@ -31,14 +31,14 @@ void UdpTester::test_with_loop(U32 iterations, bool recv_thread) {
 
     U16 port1 =  Drv::Test::get_free_port(true);
     ASSERT_NE(0, port1);
-    U16 port2 =  Drv::Test::get_free_port(true);
+    U16 port2 =  Drv::Test::get_free_port(true, port1);
     ASSERT_NE(0, port2);
 
     uint8_t attempt_to_find_available_port = 100;
 
     while ((port1 == port2) && attempt_to_find_available_port > 0)
     {
-        U16 port2 =  Drv::Test::get_free_port(true);
+        U16 port2 =  Drv::Test::get_free_port(true, port1);
         ASSERT_NE(0, port2);
         --attempt_to_find_available_port;
     }
@@ -105,10 +105,22 @@ void UdpTester::test_with_loop(U32 iterations, bool recv_thread) {
             }
         }
         // Properly stop the client on the last iteration
-        if ((1 + i) == iterations && recv_thread) {
-            this->component.stopSocketTask();
-            this->component.joinSocketTask(nullptr);
+        if (recv_thread) {
+            //this->component.close();
+            this->component.m_task_lock.lock();
+            if ((1 + i) == iterations)
+            {
+                this->component.stopSocketTask();
+                this->component.m_task_lock.unlock();
+                this->component.joinSocketTask(nullptr);
+            }
+            else
+            {
+                this->component.close();
+                this->component.m_task_lock.unlock();
+            }
         } else {
+            printf("this->component.close()\n");
             this->component.close();
         }
         udp2.close();

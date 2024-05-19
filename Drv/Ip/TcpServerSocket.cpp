@@ -43,6 +43,7 @@ TcpServerSocket::TcpServerSocket() : IpSocket(), m_base_fd(-1) {}
 SocketIpStatus TcpServerSocket::startup(const bool reuse_address) {
     NATIVE_INT_TYPE serverFd = -1;
     struct sockaddr_in address;
+    printf("TcpServerSocket::startup\n");
     this->close();
     // Acquire a socket, or return error
     if ((serverFd = ::socket(AF_INET, SOCK_STREAM, 0)) == -1) {

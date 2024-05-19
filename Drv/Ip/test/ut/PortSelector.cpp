@@ -11,7 +11,7 @@
 namespace Drv {
 namespace Test {
 
-U16 get_free_port(bool udp) {
+U16 get_free_port(bool udp, U16 not_this_port) {
     struct sockaddr_in address;
     NATIVE_INT_TYPE socketFd = -1;
     // Acquire a socket, or return error
@@ -40,7 +40,7 @@ U16 get_free_port(bool udp) {
     }
     U16 port = address.sin_port;
     // Check for root-only-port.  If so, recursively try again.
-    if (port < 1024) {
+    if ((port < 1024) || (port == not_this_port)) {
         port = get_free_port(udp);
     }
     ::close(socketFd); // Close this recursion's port again, such that we don't infinitely loop

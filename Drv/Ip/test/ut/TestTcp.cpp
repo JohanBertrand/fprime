@@ -44,6 +44,7 @@ void test_with_loop(U32 iterations) {
             Drv::Test::send_recv(server, client);
             Drv::Test::send_recv(client, server);
         }
+        printf("TcpTest close()\n");
         client.close();
         server.close();
     }

@@ -158,7 +158,7 @@ class IpSocket {
      * Closes the socket opened by the open call. In this case of the TcpServer, this does NOT close server's listening
      * port (call `shutdown`) but will close the active client connection.
      */
-    void close();
+    void close(const char* str = __builtin_FUNCTION());
 
     /**
      * \brief shutdown the socket

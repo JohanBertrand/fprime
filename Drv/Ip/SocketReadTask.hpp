@@ -15,6 +15,7 @@
 #include <Fw/Buffer/Buffer.hpp>
 #include <Drv/Ip/IpSocket.hpp>
 #include <Os/Task.hpp>
+#include <atomic>
 
 namespace Drv {
 /**
@@ -180,6 +181,8 @@ class SocketReadTask {
     bool m_reconnect; //!< Force reconnection
     bool m_reuse_address; //!< Set REUSEADDR option, only for startSocketTask and readTask
     bool m_stop; //!< Stops the task when set to true
+    public:
+    Os::Mutex m_task_lock;
 
 };
 }
